@@ -1,123 +1,240 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Map, TrendingUp, Users, Shield, BarChart3, Navigation } from 'lucide-react';
-import { AuthProvider, useAuth } from '../contexts/AuthContext';
-import InteractiveMap from '../components/InteractiveMap';
-import LoginModal from '../components/LoginModal';
-import RegisterModal from '../components/RegisterModal';
-
-// Mock data for demonstration
-const mockAlerts = [
-  {
-    id: 1,
-    type: 'tsunami',
-    severity: 'high',
-    location: 'Mumbai Coast',
-    timestamp: new Date(),
-    description: 'Tsunami warning issued for coastal areas',
-    verified: true,
-  },
-  {
-    id: 2,
-    type: 'flood',
-    severity: 'medium',
-    location: 'Goa Beaches',
-    timestamp: new Date(),
-    description: 'Heavy rainfall causing flooding',
-    verified: false,
-  },
-];
-
-const mockReports = [
-  {
-    id: 1,
-    type: 'erosion',
-    severity: 'high',
-    location: 'Kerala Coast',
-    latitude: 8.5241,
-    longitude: 76.9366,
-    description: 'Severe coastal erosion observed',
-    timestamp: new Date(),
-    upvotes: 15,
-    downvotes: 2,
-    verified: true,
-  },
-  {
-    id: 2,
-    type: 'pollution',
-    severity: 'medium',
-    location: 'Chennai Beach',
-    latitude: 12.9141,
-    longitude: 80.2206,
-    description: 'Oil spill detected near Marina Beach',
-    timestamp: new Date(),
-    upvotes: 8,
-    downvotes: 1,
-    verified: false,
-  },
-];
-
-const tabs = [
-  { id: 'map', label: 'Map', icon: Map },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'predictions', label: 'Predictions', icon: TrendingUp },
-  { id: 'gamification', label: 'Gamification', icon: Shield },
-  { id: 'admin', label: 'Admin', icon: Users },
-];
-
-interface User {
-  name: string;
-  role: string;
-}
+import { useState, useEffect } from "react";
+import InteractiveMap from "@/components/InteractiveMap";
+import StatsDashboard from "@/components/StatsDashboard";
+import AlertPanel from "@/components/AlertPanel";
+import ReportModal from "@/components/ReportModal";
+import LoginModal from "@/components/LoginModal";
+import RegisterModal from "@/components/RegisterModal";
+import UserProfile from "@/components/UserProfile";
+import GamificationPanel from "@/components/GamificationPanel";
+import PredictiveAnalytics from "@/components/PredictiveAnalytics";
+import NotificationPanel from "@/components/NotificationPanel";
+import AdminDashboard from "@/components/AdminDashboard";
+import { useAuth, AuthProvider } from "@/contexts/AuthContext";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useReports } from "@/hooks/useReports";
+import { 
+  mockUsers, 
+  mockReports, 
+  mockAlerts, 
+  mockPredictions, 
+  mockAnalytics, 
+  mockStats, 
+  mockChartData,
+  type Report,
+  type Alert,
+  type User
+} from "@/data/mockData";
 
 function HomeContent() {
-  const [activeTab, setActiveTab] = useState('map');
+  const { user, login, register, logout } = useAuth();
+  const { notifications, addNotification, markAsRead } = useNotifications();
+  const { reports, addReport, updateReport } = useReports();
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const { user, logout, isAuthenticated } = useAuth();
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [activeTab, setActiveTab] = useState<'map' | 'analytics' | 'alerts' | 'admin'>('map');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const alerts = mockAlerts;
-  const reports = mockReports;
+  // Use mock data for demonstration
+  const [alerts] = useState<Alert[]>(mockAlerts);
+  const [allReports] = useState<Report[]>(mockReports);
+  const [predictions] = useState(mockPredictions);
+  const [analytics] = useState(mockAnalytics);
+  const [stats] = useState(mockStats);
+
+  // Simulate loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleReportClick = (report: Report) => {
+    setSelectedReport(report);
+  };
+
+  const handleAddReport = (reportData: any) => {
+    const newReport: Report = {
+      id: Date.now(),
+      type: reportData.type,
+      location: reportData.location,
+      description: reportData.description,
+      timestamp: new Date(),
+      verified: false,
+      reporter: user || mockUsers[0],
+      severity: reportData.severity || 'medium',
+      status: 'pending',
+      upvotes: 0,
+      downvotes: 0
+    };
+    addReport(newReport);
+    addNotification({
+      id: Date.now(),
+      type: 'success',
+      title: 'Report Submitted',
+      message: 'Your report has been submitted and is under review.',
+      timestamp: new Date()
+    });
+  };
+
+  const handleLogin = async (credentials: { email: string; password: string }) => {
+    try {
+      // Simulate login with mock user
+      const mockUser = mockUsers.find(u => u.email === credentials.email) || mockUsers[0];
+      await login(credentials.email, credentials.password);
+      setShowLoginModal(false);
+      addNotification({
+        id: Date.now(),
+        type: 'success',
+        title: 'Login Successful',
+        message: `Welcome back, ${mockUser.name}!`,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      addNotification({
+        id: Date.now(),
+        type: 'error',
+        title: 'Login Failed',
+        message: 'Invalid credentials. Please try again.',
+        timestamp: new Date()
+      });
+    }
+  };
+
+  const handleRegister = async (userData: { name: string; email: string; password: string }) => {
+    try {
+      await register(userData.name, userData.email, userData.password);
+      setShowRegisterModal(false);
+      addNotification({
+        id: Date.now(),
+        type: 'success',
+        title: 'Registration Successful',
+        message: 'Welcome to SAGAR Platform! Your account has been created.',
+        timestamp: new Date()
+      });
+    } catch (error) {
+      addNotification({
+        id: Date.now(),
+        type: 'error',
+        title: 'Registration Failed',
+        message: 'Failed to create account. Please try again.',
+        timestamp: new Date()
+      });
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    setShowUserProfile(false);
+    setShowAdminDashboard(false);
+    addNotification({
+      id: Date.now(),
+      type: 'info',
+      title: 'Logged Out',
+      message: 'You have been successfully logged out.',
+      timestamp: new Date()
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <h2 className="mt-6 text-2xl font-bold text-gray-900">Loading SAGAR Platform...</h2>
+          <p className="mt-2 text-gray-600">Preparing your geospatial intelligence dashboard</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-white/95 backdrop-blur-sm shadow-xl border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Shield className="h-8 w-8 text-blue-600" />
-                <h1 className="text-2xl font-bold text-gray-900">SAGAR</h1>
+          <div className="flex justify-between items-center h-20">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl">🌊</span>
+                  </div>
+                  <div>
+                    <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                      SAGAR
+                    </h1>
+                    <p className="text-sm text-gray-500 font-medium">Social-AI Geospatial Alerts & Reporting</p>
+                  </div>
+                </div>
               </div>
-              <span className="text-sm text-gray-500">Coastal Hazard Monitoring</span>
             </div>
             
+            <nav className="hidden md:flex space-x-2">
+              {[
+                { id: 'map', label: 'Interactive Map', icon: '🗺️' },
+                { id: 'analytics', label: 'Analytics', icon: '📊' },
+                { id: 'alerts', label: 'Alerts', icon: '🚨' },
+                ...(user?.role === 'admin' ? [{ id: 'admin', label: 'Admin', icon: '⚙️' }] : [])
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center space-x-2 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    activeTab === tab.id
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg transform scale-105'
+                      : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                  }`}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </nav>
+
             <div className="flex items-center space-x-4">
-              {isAuthenticated && user ? (
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700">Welcome, {user.firstName}</span>
+              <button
+                onClick={() => setShowReportModal(true)}
+                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                + Report Incident
+              </button>
+              
+              {user ? (
+                <div className="flex items-center space-x-3">
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                    <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+                  </div>
                   <button
-                    onClick={logout}
-                    className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900"
+                    onClick={() => setShowUserProfile(true)}
+                    className="w-10 h-10 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-full flex items-center justify-center hover:from-blue-200 hover:to-cyan-200 transition-all duration-200"
                   >
-                    Logout
+                    <span className="text-lg font-bold text-blue-600">
+                      {user.name.charAt(0).toUpperCase()}
+                    </span>
                   </button>
                 </div>
               ) : (
-                <div className="flex space-x-2">
+                <div className="flex items-center space-x-3">
                   <button
                     onClick={() => setShowLoginModal(true)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                    className="text-gray-700 hover:text-blue-600 px-4 py-2 text-sm font-medium transition-colors"
                   >
                     Login
                   </button>
                   <button
                     onClick={() => setShowRegisterModal(true)}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                    className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white px-6 py-2 rounded-xl text-sm font-medium transition-all duration-200"
                   >
-                    Register
+                    Sign Up
                   </button>
                 </div>
               )}
@@ -126,193 +243,99 @@ function HomeContent() {
         </div>
       </header>
 
-      {/* Navigation Tabs */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                  activeTab === tab.id
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <tab.icon className="h-4 w-4" />
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </nav>
-        </div>
-      </div>
-
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === "map" && (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Map Section */}
-            <div className="lg:col-span-3">
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="p-4 border-b border-gray-200">
-                  <h2 className="text-xl font-semibold text-gray-900 flex items-center space-x-2">
-                    <Map className="h-6 w-6 text-blue-600" />
-                    <span>Real-time Hazard Map</span>
-                  </h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Interactive map showing coastal hazards, reports, and predictions
-                  </p>
-                </div>
-                <div className="h-[600px]">
-                  <InteractiveMap 
-                    reports={reports.map(report => ({
-                      ...report,
-                      location: { lat: report.latitude, lng: report.longitude }
-                    }))}
-                    alerts={alerts}
-                    onReportClick={(report) => console.log('Report clicked:', report)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Alerts Panel */}
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Active Alerts</h3>
-                <div className="space-y-3">
-                  {alerts.map((alert) => (
-                    <div key={alert.id} className={`p-3 rounded-lg border-l-4 ${
-                      alert.severity === 'high' ? 'border-red-500 bg-red-50' :
-                      alert.severity === 'medium' ? 'border-yellow-500 bg-yellow-50' :
-                      'border-green-500 bg-green-50'
-                    }`}>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-medium text-gray-900 capitalize">{alert.type}</h4>
-                          <p className="text-sm text-gray-600">{alert.location}</p>
-                          <p className="text-xs text-gray-500 mt-1">{alert.description}</p>
-                        </div>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          alert.verified ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {alert.verified ? 'Verified' : 'Unverified'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Stats Dashboard */}
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Statistics</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{reports.length}</div>
-                    <div className="text-sm text-gray-500">Reports</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">{alerts.length}</div>
-                    <div className="text-sm text-gray-500">Alerts</div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'map' && (
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+              <div className="lg:col-span-3">
+                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
+                  <div className="h-[600px] w-full">
+                    <InteractiveMap
+                      reports={allReports}
+                      alerts={alerts}
+                      onReportClick={handleReportClick}
+                    />
                   </div>
                 </div>
               </div>
-              
-              {/* Quick Actions */}
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                <div className="space-y-3">
-                  <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors">
-                    <Navigation className="h-5 w-5" />
-                    <span>View Evacuation Routes</span>
-                  </button>
-                  <button className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors">
-                    <Users className="h-5 w-5" />
-                    <span>Join Community</span>
-                  </button>
-                  <button className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors">
-                    <TrendingUp className="h-5 w-5" />
-                    <span>View Analytics</span>
-                  </button>
-                </div>
+              <div className="space-y-6">
+                <StatsDashboard stats={stats} analytics={analytics} />
+                <GamificationPanel user={user} />
               </div>
             </div>
           </div>
         )}
 
-        {activeTab === "analytics" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Analytics Dashboard</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-3xl font-bold text-blue-600">{reports.length}</div>
-                  <div className="text-sm text-gray-600">Total Reports</div>
-                </div>
-                <div className="text-center p-4 bg-red-50 rounded-lg">
-                  <div className="text-3xl font-bold text-red-600">{alerts.length}</div>
-                  <div className="text-sm text-gray-600">Active Alerts</div>
-                </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-3xl font-bold text-green-600">85%</div>
-                  <div className="text-sm text-gray-600">Accuracy Rate</div>
-                </div>
-              </div>
-            </div>
+        {activeTab === 'analytics' && (
+          <div className="space-y-8">
+            <PredictiveAnalytics predictions={predictions} chartData={mockChartData} />
           </div>
         )}
 
-        {activeTab === "predictions" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Predictive Analytics</h2>
-              <p className="text-gray-600">AI-powered predictions for coastal hazards will be displayed here.</p>
-            </div>
+        {activeTab === 'alerts' && (
+          <div className="space-y-8">
+            <AlertPanel alerts={alerts} />
           </div>
         )}
 
-        {activeTab === "gamification" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Gamification</h2>
-              <p className="text-gray-600">Community engagement features and rewards will be shown here.</p>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "admin" && (user?.role === "admin" || user?.role === "official") && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Admin Dashboard</h2>
-              <p className="text-gray-600">Administrative controls and system management tools.</p>
-            </div>
+        {activeTab === 'admin' && user?.role === 'admin' && (
+          <div className="space-y-8">
+            <AdminDashboard 
+              users={mockUsers}
+              reports={allReports}
+              alerts={alerts}
+              analytics={analytics}
+            />
           </div>
         )}
       </main>
 
       {/* Modals */}
+      {showReportModal && (
+        <ReportModal
+          onClose={() => setShowReportModal(false)}
+          onSubmit={handleAddReport}
+          user={user}
+        />
+      )}
+
       {showLoginModal && (
-        <LoginModal 
+        <LoginModal
           onClose={() => setShowLoginModal(false)}
+          onLogin={handleLogin}
           onSwitchToRegister={() => {
             setShowLoginModal(false);
             setShowRegisterModal(true);
           }}
         />
       )}
-      
+
       {showRegisterModal && (
-        <RegisterModal 
+        <RegisterModal
           onClose={() => setShowRegisterModal(false)}
+          onRegister={handleRegister}
           onSwitchToLogin={() => {
             setShowRegisterModal(false);
             setShowLoginModal(true);
           }}
         />
       )}
+
+      {showUserProfile && user && (
+        <UserProfile
+          user={user}
+          onClose={() => setShowUserProfile(false)}
+          onLogout={handleLogout}
+        />
+      )}
+
+      {/* Notification Panel */}
+      <NotificationPanel
+        notifications={notifications}
+        onMarkAsRead={markAsRead}
+        onClose={() => {}}
+      />
     </div>
   );
 }

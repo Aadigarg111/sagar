@@ -2,13 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  experimental: {
-    serverComponentsExternalPackages: ['mapbox-gl']
-  },
+  transpilePackages: ['leaflet', 'recharts'],
   webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'mapbox-gl': 'mapbox-gl/dist/mapbox-gl.js',
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
     };
     return config;
   },

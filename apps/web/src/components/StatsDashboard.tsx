@@ -2,16 +2,27 @@
 
 import { TrendingUp, Users, MapPin, AlertTriangle, Activity, Shield } from "lucide-react";
 
-const StatsDashboard: React.FC = () => {
-  // Mock data for demonstration
-  const stats = {
-    totalReports: 1247,
-    verifiedReports: 892,
-    activeAlerts: 3,
-    communityMembers: 2847,
-    responseTime: "4.2 min",
-    accuracy: "94.2%"
+interface StatsDashboardProps {
+  stats?: any;
+  analytics?: any;
+}
+
+const StatsDashboard: React.FC<StatsDashboardProps> = ({ stats, analytics }) => {
+  // Default stats if not provided
+  const defaultStats = {
+    reportsToday: 23,
+    alertsActive: 8,
+    predictionsGenerated: 12,
+    responseTime: '12.5 min',
+    accuracy: '87.3%',
+    userEngagement: '94.2%',
+    reportsThisWeek: 156,
+    reportsThisMonth: 647,
+    verifiedThisWeek: 134,
+    falseAlarmsThisWeek: 8
   };
+
+  const currentStats = stats || defaultStats;
 
   const recentActivity = [
     { type: "report", message: "New tsunami warning reported in Chennai", time: "2m ago" },
@@ -45,32 +56,32 @@ const StatsDashboard: React.FC = () => {
         </h3>
         
         <div className="grid grid-cols-2 gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{stats.totalReports.toLocaleString()}</div>
-            <div className="text-sm text-gray-600">Total Reports</div>
+          <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+            <div className="text-2xl font-bold text-blue-600">{currentStats.reportsToday}</div>
+            <div className="text-sm text-blue-700 font-medium">Reports Today</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{stats.verifiedReports.toLocaleString()}</div>
-            <div className="text-sm text-gray-600">Verified</div>
+          <div className="text-center p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+            <div className="text-2xl font-bold text-green-600">{currentStats.verifiedThisWeek}</div>
+            <div className="text-sm text-green-700 font-medium">Verified This Week</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-red-600">{stats.activeAlerts}</div>
-            <div className="text-sm text-gray-600">Active Alerts</div>
+          <div className="text-center p-3 bg-gradient-to-br from-red-50 to-red-100 rounded-lg border border-red-200">
+            <div className="text-2xl font-bold text-red-600">{currentStats.alertsActive}</div>
+            <div className="text-sm text-red-700 font-medium">Active Alerts</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">{stats.communityMembers.toLocaleString()}</div>
-            <div className="text-sm text-gray-600">Community</div>
+          <div className="text-center p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+            <div className="text-2xl font-bold text-purple-600">{currentStats.predictionsGenerated}</div>
+            <div className="text-sm text-purple-700 font-medium">AI Predictions</div>
           </div>
         </div>
 
         <div className="mt-4 pt-4 border-t border-gray-200">
           <div className="grid grid-cols-2 gap-4 text-center">
             <div>
-              <div className="text-lg font-semibold text-gray-900">{stats.responseTime}</div>
+              <div className="text-lg font-semibold text-gray-900">{currentStats.responseTime}</div>
               <div className="text-sm text-gray-600">Avg Response Time</div>
             </div>
             <div>
-              <div className="text-lg font-semibold text-gray-900">{stats.accuracy}</div>
+              <div className="text-lg font-semibold text-gray-900">{currentStats.accuracy}</div>
               <div className="text-sm text-gray-600">AI Accuracy</div>
             </div>
           </div>

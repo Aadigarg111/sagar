@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
 
 interface Report {
   id: number;
@@ -32,125 +30,213 @@ interface InteractiveMapProps {
 
 const InteractiveMap: React.FC<InteractiveMapProps> = ({ reports, alerts, onReportClick }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
+  const map = useRef<L.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (map.current) return; // Initialize map only once
+    if (map.current || typeof window === 'undefined') return; // Initialize map only once and only on client
 
-    // Set your Mapbox token here
-    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "pk.eyJ1Ijoic2FnYXJwbGF0Zm9ybSIsImEiOiJjbG9yZ2V0ZXN0In0.example";
+    console.log('Initializing map...');
+    // Dynamically import Leaflet
+    import('leaflet').then((L) => {
+      console.log('Leaflet loaded successfully');
+      // Fix for default markers in Leaflet
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      });
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current!,
-      style: "mapbox://styles/mapbox/satellite-streets-v12",
-      center: [80.2707, 13.0827], // Chennai coordinates
-      zoom: 10,
-      pitch: 45,
-      bearing: 0
-    });
+      if (mapContainer.current) {
+        map.current = L.map(mapContainer.current, {
+          center: [13.0827, 80.2707], // Chennai coordinates [lat, lng]
+          zoom: 10,
+          zoomControl: true,
+          attributionControl: true
+        });
 
-    map.current.on("load", () => {
-      setMapLoaded(true);
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors',
+          maxZoom: 19
+        }).addTo(map.current);
+
+        map.current.whenReady(() => {
+          console.log('Map ready!');
+          setMapLoaded(true);
+        });
+      }
+    }).catch((error) => {
+      console.error('Failed to load Leaflet:', error);
+      setMapError('Failed to load map. Please refresh the page.');
     });
 
     return () => {
-      map.current?.remove();
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
     };
   }, []);
 
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
-    // Clear existing markers
-    const markers = document.querySelectorAll('.mapboxgl-marker');
-    markers.forEach(marker => marker.remove());
+    // Dynamically import Leaflet for marker operations
+    import('leaflet').then((L) => {
+      // Clear existing markers
+      map.current!.eachLayer((layer) => {
+        if (layer instanceof L.Marker) {
+          map.current!.removeLayer(layer);
+        }
+      });
 
-    // Add report markers
-    reports.forEach((report) => {
-      const marker = new mapboxgl.Marker({
-        color: report.verified ? '#10B981' : '#F59E0B',
-        scale: 1.2
-      })
-        .setLngLat([report.location.lng, report.location.lat])
-        .addTo(map.current!);
+      // Add report markers
+      reports.forEach((report) => {
+        const markerColor = report.verified ? '#10B981' : '#F59E0B';
+        
+        const customIcon = L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="
+            background-color: ${markerColor};
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          "></div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        });
 
-      const popup = new mapboxgl.Popup({
-        offset: 25,
-        closeButton: false,
-        closeOnClick: false
-      }).setHTML(`
-        <div class="p-3">
-          <h3 class="font-semibold text-gray-900">${report.type.replace('_', ' ').toUpperCase()}</h3>
-          <p class="text-sm text-gray-600 mt-1">${report.description}</p>
-          <div class="flex items-center justify-between mt-2">
-            <span class="text-xs text-gray-500">${report.timestamp.toLocaleTimeString()}</span>
-            <span class="text-xs ${report.verified ? 'text-green-600' : 'text-yellow-600'}">
-              ${report.verified ? 'Verified' : 'Pending'}
-            </span>
+        const marker = L.marker([report.location.lat, report.location.lng], { icon: customIcon })
+          .addTo(map.current!);
+
+        const popup = L.popup({
+          closeButton: true,
+          closeOnClick: false
+        }).setContent(`
+          <div class="p-3">
+            <h3 class="font-semibold text-gray-900">${report.type.replace('_', ' ').toUpperCase()}</h3>
+            <p class="text-sm text-gray-600 mt-1">${report.description}</p>
+            <div class="flex items-center justify-between mt-2">
+              <span class="text-xs text-gray-500">${report.timestamp.toLocaleTimeString()}</span>
+              <span class="text-xs ${report.verified ? 'text-green-600' : 'text-yellow-600'}">
+                ${report.verified ? 'Verified' : 'Pending'}
+              </span>
+            </div>
           </div>
-        </div>
-      `);
+        `);
 
-      marker.setPopup(popup);
-      marker.getElement().addEventListener('click', () => onReportClick(report));
-    });
+        marker.bindPopup(popup);
+        marker.on('click', () => onReportClick(report));
+      });
 
-    // Add alert markers
-    alerts.forEach((alert) => {
-      const alertColor = alert.severity === 'high' ? '#EF4444' : 
-                        alert.severity === 'medium' ? '#F59E0B' : '#10B981';
-      
-      const marker = new mapboxgl.Marker({
-        color: alertColor,
-        scale: 1.5
-      })
-        .setLngLat([80.2707, 13.0827]) // Default to Chennai for demo
-        .addTo(map.current!);
+      // Add alert markers
+      alerts.forEach((alert) => {
+        const alertColor = alert.severity === 'high' ? '#EF4444' : 
+                          alert.severity === 'medium' ? '#F59E0B' : '#10B981';
+        
+        const customIcon = L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="
+            background-color: ${alertColor};
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          "></div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
 
-      const popup = new mapboxgl.Popup({
-        offset: 25,
-        closeButton: false,
-        closeOnClick: false
-      }).setHTML(`
-        <div class="p-3">
-          <h3 class="font-semibold text-gray-900">${alert.type.replace('_', ' ').toUpperCase()}</h3>
-          <p class="text-sm text-gray-600 mt-1">${alert.description}</p>
-          <div class="flex items-center justify-between mt-2">
-            <span class="text-xs text-gray-500">${alert.timestamp.toLocaleTimeString()}</span>
-            <span class="text-xs font-semibold ${alert.severity === 'high' ? 'text-red-600' : 
-              alert.severity === 'medium' ? 'text-yellow-600' : 'text-green-600'}">
-              ${alert.severity.toUpperCase()}
-            </span>
+        const marker = L.marker([13.0827, 80.2707], { icon: customIcon }) // Default to Chennai for demo
+          .addTo(map.current!);
+
+        const popup = L.popup({
+          closeButton: true,
+          closeOnClick: false
+        }).setContent(`
+          <div class="p-3">
+            <h3 class="font-semibold text-gray-900">${alert.type.replace('_', ' ').toUpperCase()}</h3>
+            <p class="text-sm text-gray-600 mt-1">${alert.description}</p>
+            <div class="flex items-center justify-between mt-2">
+              <span class="text-xs text-gray-500">${alert.timestamp.toLocaleTimeString()}</span>
+              <span class="text-xs font-semibold ${alert.severity === 'high' ? 'text-red-600' : 
+                alert.severity === 'medium' ? 'text-yellow-600' : 'text-green-600'}">
+                ${alert.severity.toUpperCase()}
+              </span>
+            </div>
           </div>
-        </div>
-      `);
+        `);
 
-      marker.setPopup(popup);
+        marker.bindPopup(popup);
+      });
     });
 
   }, [reports, alerts, mapLoaded, onReportClick]);
 
+  if (mapError) {
+    return (
+      <div className="relative w-full h-full flex items-center justify-center bg-gray-100">
+        <div className="text-center p-8">
+          <div className="text-red-500 text-2xl mb-4">⚠️</div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Map Loading Error</h3>
+          <p className="text-gray-600 mb-4">{mapError}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full h-full">
-      <div ref={mapContainer} className="w-full h-full" />
+      {!mapLoaded && !mapError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading map...</p>
+          </div>
+        </div>
+      )}
+      <div ref={mapContainer} className="w-full h-full" style={{ minHeight: '400px' }} />
       
       {/* Map Controls */}
       <div className="absolute top-4 right-4 space-y-2">
         <button
-          onClick={() => map.current?.flyTo({ center: [80.2707, 13.0827], zoom: 10 })}
+          onClick={() => {
+            if (map.current) {
+              map.current.setView([13.0827, 80.2707], 10);
+            }
+          }}
           className="bg-white hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-lg shadow-lg text-sm font-medium"
         >
           Chennai
         </button>
         <button
-          onClick={() => map.current?.flyTo({ center: [72.8777, 19.0760], zoom: 10 })}
+          onClick={() => {
+            if (map.current) {
+              map.current.setView([19.0760, 72.8777], 10);
+            }
+          }}
           className="bg-white hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-lg shadow-lg text-sm font-medium"
         >
           Mumbai
         </button>
         <button
-          onClick={() => map.current?.flyTo({ center: [88.3639, 22.5726], zoom: 10 })}
+          onClick={() => {
+            if (map.current) {
+              map.current.setView([22.5726, 88.3639], 10);
+            }
+          }}
           className="bg-white hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-lg shadow-lg text-sm font-medium"
         >
           Kolkata

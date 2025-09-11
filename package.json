@@ -1,27 +1,13 @@
 {
   "name": "sagar-platform",
   "version": "1.0.0",
-  "description": "SAGAR - Social-AI Geospatial Alerts & Reporting Platform",
+  "description": "SAGAR - Social-AI Geospatial Alerts & Reporting Platform - Frontend Demo",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint",
-    "test": "turbo run test",
-    "clean": "turbo run clean",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "db:migrate": "cd apps/backend && npm run migration:run",
-    "db:seed": "cd apps/backend && npm run seed:run"
-  },
-  "devDependencies": {
-    "@types/node": "^20.8.0",
-    "turbo": "^1.13.4",
-    "typescript": "^5.2.2"
+    "dev": "cd apps/web && npm run dev",
+    "build": "cd apps/web && npm run build",
+    "start": "cd apps/web && npm run start",
+    "install": "cd apps/web && npm install"
   },
   "engines": {
     "node": ">=18.0.0",
