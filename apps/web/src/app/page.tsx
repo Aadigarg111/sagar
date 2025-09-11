@@ -2,6 +2,10 @@
 
 import { useState } from 'react';
 import { Map, TrendingUp, Users, Shield, BarChart3, Navigation } from 'lucide-react';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import InteractiveMap from '../components/InteractiveMap';
+import LoginModal from '../components/LoginModal';
+import RegisterModal from '../components/RegisterModal';
 
 // Mock data for demonstration
 const mockAlerts = [
@@ -67,9 +71,11 @@ interface User {
   role: string;
 }
 
-export default function Home() {
+function HomeContent() {
   const [activeTab, setActiveTab] = useState('map');
-  const [user, setUser] = useState<User | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const { user, logout, isAuthenticated } = useAuth();
 
   const alerts = mockAlerts;
   const reports = mockReports;
@@ -89,11 +95,11 @@ export default function Home() {
             </div>
             
             <div className="flex items-center space-x-4">
-              {user ? (
+              {isAuthenticated && user ? (
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700">Welcome, {user.name}</span>
+                  <span className="text-sm text-gray-700">Welcome, {user.firstName}</span>
                   <button
-                    onClick={() => setUser(null)}
+                    onClick={logout}
                     className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900"
                   >
                     Logout
@@ -102,13 +108,13 @@ export default function Home() {
               ) : (
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => setUser({ name: 'Demo User', role: 'citizen' })}
+                    onClick={() => setShowLoginModal(true)}
                     className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
                   >
                     Login
                   </button>
                   <button
-                    onClick={() => setUser({ name: 'Demo User', role: 'citizen' })}
+                    onClick={() => setShowRegisterModal(true)}
                     className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
                   >
                     Register
@@ -158,14 +164,15 @@ export default function Home() {
                     Interactive map showing coastal hazards, reports, and predictions
                   </p>
                 </div>
-                <div className="h-[600px] bg-gray-100 flex items-center justify-center">
-                  <div className="text-center">
-                    <Map className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">Interactive Map Component</p>
-                    <p className="text-sm text-gray-400 mt-2">
-                      {reports.length} reports and {alerts.length} alerts detected
-                    </p>
-                  </div>
+                <div className="h-[600px]">
+                  <InteractiveMap 
+                    reports={reports.map(report => ({
+                      ...report,
+                      location: { lat: report.latitude, lng: report.longitude }
+                    }))}
+                    alerts={alerts}
+                    onReportClick={(report) => console.log('Report clicked:', report)}
+                  />
                 </div>
               </div>
             </div>
@@ -285,6 +292,35 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* Modals */}
+      {showLoginModal && (
+        <LoginModal 
+          onClose={() => setShowLoginModal(false)}
+          onSwitchToRegister={() => {
+            setShowLoginModal(false);
+            setShowRegisterModal(true);
+          }}
+        />
+      )}
+      
+      {showRegisterModal && (
+        <RegisterModal 
+          onClose={() => setShowRegisterModal(false)}
+          onSwitchToLogin={() => {
+            setShowRegisterModal(false);
+            setShowLoginModal(true);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <AuthProvider>
+      <HomeContent />
+    </AuthProvider>
   );
 }

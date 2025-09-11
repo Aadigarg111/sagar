@@ -1,5 +1,5 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Report } from './report.entity';
 
 export enum MediaType {
   IMAGE = 'image',
@@ -8,53 +8,60 @@ export enum MediaType {
   DOCUMENT = 'document',
 }
 
-@Schema({ timestamps: true })
-export class MediaFile extends Document {
-  @Prop({ required: true })
+@Entity('media_files')
+export class MediaFile {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column()
   filename: string;
 
-  @Prop({ required: true })
+  @Column()
   originalName: string;
 
-  @Prop({ required: true })
+  @Column()
   mimeType: string;
 
-  @Prop({ required: true })
+  @Column()
   size: number;
 
-  @Prop({ 
-    type: String, 
-    enum: MediaType, 
-    required: true 
+  @Column({
+    type: 'enum',
+    enum: MediaType
   })
   type: MediaType;
 
-  @Prop({ required: true })
+  @Column()
   url: string;
 
-  @Prop({ required: true })
+  @Column()
   bucket: string;
 
-  @Prop({ required: true })
+  @Column()
   key: string;
 
-  @Prop({ type: Object })
+  @Column('json', { nullable: true })
   metadata: Record<string, any>; // EXIF data, dimensions, etc.
 
-  @Prop()
+  @Column({ nullable: true })
   thumbnailUrl: string;
 
-  @Prop({ default: false })
+  @Column({ default: false })
   isProcessed: boolean;
 
-  @Prop()
+  @Column({ nullable: true })
   aiAnalysis: string; // JSON string of AI analysis results
 
-  @Prop({ type: Types.ObjectId, ref: 'Report', required: true })
-  reportId: Types.ObjectId;
+  @ManyToOne(() => Report)
+  @JoinColumn({ name: 'reportId' })
+  report: Report;
 
+  @Column()
+  reportId: string;
+
+  @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
   updatedAt: Date;
 }
-
-export const MediaFileSchema = SchemaFactory.createForClass(MediaFile);

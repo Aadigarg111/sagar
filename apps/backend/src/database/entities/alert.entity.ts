@@ -1,5 +1,5 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { User } from './user.entity';
 
 export enum AlertType {
   TSUNAMI_WARNING = 'tsunami_warning',
@@ -27,90 +27,86 @@ export enum AlertStatus {
   CANCELLED = 'cancelled',
 }
 
-@Schema({ timestamps: true })
-export class Alert extends Document {
-  @Prop({ 
-    type: String, 
-    enum: AlertType, 
-    required: true 
+@Entity('alerts')
+export class Alert {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({
+    type: 'enum',
+    enum: AlertType
   })
   type: AlertType;
 
-  @Prop({ 
-    type: String, 
-    enum: AlertSeverity, 
-    required: true 
+  @Column({
+    type: 'enum',
+    enum: AlertSeverity
   })
   severity: AlertSeverity;
 
-  @Prop({ required: true })
+  @Column()
   title: string;
 
-  @Prop({ required: true })
+  @Column()
   description: string;
 
-  @Prop()
+  @Column({ nullable: true })
   instructions: string;
 
-  @Prop({ 
-    type: {
-      type: String,
-      enum: ['Polygon'],
-      default: 'Polygon'
-    },
-    coordinates: {
-      type: [[[Number]]],
-      required: false
-    }
-  })
+  @Column('json', { nullable: true })
   affectedArea: {
     type: string;
     coordinates: number[][][];
   };
 
-  @Prop()
+  @Column('decimal', { precision: 10, scale: 8, nullable: true })
   centerLatitude: number;
 
-  @Prop()
+  @Column('decimal', { precision: 11, scale: 8, nullable: true })
   centerLongitude: number;
 
-  @Prop()
+  @Column({ nullable: true })
   radius: number; // Radius in kilometers
 
-  @Prop({ 
-    type: String, 
-    enum: AlertStatus, 
-    default: AlertStatus.ACTIVE 
+  @Column({
+    type: 'enum',
+    enum: AlertStatus,
+    default: AlertStatus.ACTIVE
   })
   status: AlertStatus;
 
-  @Prop({ default: false })
+  @Column({ default: false })
   isVerified: boolean;
 
-  @Prop()
+  @Column({ nullable: true })
   source: string; // e.g., 'INCOIS', 'IMD', 'User Report', 'AI Prediction'
 
-  @Prop({ type: Object, default: {} })
+  @Column('json', { default: {} })
   metadata: Record<string, any>;
 
-  @Prop()
+  @Column({ nullable: true })
   expiresAt: Date;
 
-  @Prop({ default: 0 })
+  @Column({ default: 0 })
   viewCount: number;
 
-  @Prop({ default: 0 })
+  @Column({ default: 0 })
   shareCount: number;
 
-  @Prop({ type: Types.ObjectId, ref: 'User' })
-  createdById: Types.ObjectId;
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'createdById' })
+  createdBy: User;
 
+  @Column({ nullable: true })
+  createdById: string;
+
+  @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
   updatedAt: Date;
 
   get centerLocation(): [number, number] {
     return [this.centerLongitude, this.centerLatitude];
   }
 }
-
-export const AlertSchema = SchemaFactory.createForClass(Alert);

@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AlertsController } from './alerts.controller';
 import { AlertsService } from './alerts.service';
-import { Alert, AlertSchema } from '../../database/entities/alert.entity';
+import { Alert } from '../../database/entities/alert.entity';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: Alert.name, schema: AlertSchema }])],
+  imports: [TypeOrmModule.forFeature([Alert])],
   controllers: [AlertsController],
   providers: [AlertsService],
   exports: [AlertsService],
