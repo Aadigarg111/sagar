@@ -1,33 +1,39 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { User, UserSchema } from './entities/user.entity';
-import { Report, ReportSchema } from './entities/report.entity';
-import { Alert, AlertSchema } from './entities/alert.entity';
-import { MediaFile, MediaFileSchema } from './entities/media-file.entity';
-import { UserReputation, UserReputationSchema } from './entities/user-reputation.entity';
-import { Prediction, PredictionSchema } from './entities/prediction.entity';
+import { User } from './entities/user.entity';
+import { Report } from './entities/report.entity';
+import { Alert } from './entities/alert.entity';
+import { MediaFile } from './entities/media-file.entity';
+import { UserReputation } from './entities/user-reputation.entity';
+import { Prediction } from './entities/prediction.entity';
 
 @Module({
   imports: [
-    MongooseModule.forRootAsync({
+    TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        uri: configService.get('MONGODB_URI', 'mongodb+srv://aadileetcode:3PyPy3AbgYSbTtrZ@cluster0.ppfyozj.mongodb.net/sagar_db'),
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
+        type: 'postgres',
+        host: configService.get('DB_HOST', 'localhost'),
+        port: configService.get('DB_PORT', 5432),
+        username: configService.get('DB_USERNAME', 'postgres'),
+        password: configService.get('DB_PASSWORD', 'password'),
+        database: configService.get('DB_NAME', 'sagar_platform'),
+        entities: [User, Report, Alert, MediaFile, UserReputation, Prediction],
+        synchronize: configService.get('NODE_ENV') === 'development',
+        logging: configService.get('NODE_ENV') === 'development',
       }),
       inject: [ConfigService],
     }),
-    MongooseModule.forFeature([
-      { name: User.name, schema: UserSchema },
-      { name: Report.name, schema: ReportSchema },
-      { name: Alert.name, schema: AlertSchema },
-      { name: MediaFile.name, schema: MediaFileSchema },
-      { name: UserReputation.name, schema: UserReputationSchema },
-      { name: Prediction.name, schema: PredictionSchema },
+    TypeOrmModule.forFeature([
+      User,
+      Report,
+      Alert,
+      MediaFile,
+      UserReputation,
+      Prediction,
     ]),
   ],
-  exports: [MongooseModule],
+  exports: [TypeOrmModule],
 })
 export class DatabaseModule {}

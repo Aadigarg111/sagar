@@ -1,5 +1,4 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 export enum UserRole {
   CITIZEN = 'citizen',
@@ -9,57 +8,61 @@ export enum UserRole {
   ADMIN = 'admin',
 }
 
-@Schema({ timestamps: true })
-export class User extends Document {
-  @Prop({ required: true, unique: true })
+@Entity('users')
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ unique: true })
   email: string;
 
-  @Prop({ required: true })
+  @Column()
   password: string;
 
-  @Prop({ required: true })
+  @Column()
   firstName: string;
 
-  @Prop({ required: true })
+  @Column()
   lastName: string;
 
-  @Prop()
+  @Column({ nullable: true })
   phone: string;
 
-  @Prop({ 
-    type: String, 
-    enum: UserRole, 
-    default: UserRole.CITIZEN 
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.CITIZEN
   })
   role: UserRole;
 
-  @Prop({ default: 0 })
+  @Column({ default: 0 })
   reputation: number;
 
-  @Prop()
+  @Column({ nullable: true })
   location: string;
 
-  @Prop()
+  @Column({ nullable: true })
   avatar: string;
 
-  @Prop({ type: [String], default: [] })
+  @Column('text', { array: true, default: [] })
   badges: string[];
 
-  @Prop({ default: true })
+  @Column({ default: true })
   isActive: boolean;
 
-  @Prop({ default: false })
+  @Column({ default: false })
   isVerified: boolean;
 
-  @Prop()
+  @Column({ nullable: true })
   lastLoginAt: Date;
 
+  @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
   updatedAt: Date;
 
   get fullName(): string {
     return `${this.firstName} ${this.lastName}`;
   }
 }
-
-export const UserSchema = SchemaFactory.createForClass(User);

@@ -1,5 +1,4 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 export enum PredictionType {
   STORM_SURGE = 'storm_surge',
@@ -17,86 +16,79 @@ export enum PredictionStatus {
   CANCELLED = 'cancelled',
 }
 
-@Schema({ timestamps: true })
-export class Prediction extends Document {
-  @Prop({ 
-    type: String, 
-    enum: PredictionType, 
-    required: true 
+@Entity('predictions')
+export class Prediction {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({
+    type: 'enum',
+    enum: PredictionType
   })
   type: PredictionType;
 
-  @Prop({ required: true })
+  @Column()
   title: string;
 
-  @Prop({ required: true })
+  @Column()
   description: string;
 
-  @Prop({ 
-    type: {
-      type: String,
-      enum: ['Polygon'],
-      default: 'Polygon'
-    },
-    coordinates: {
-      type: [[[Number]]],
-      required: true
-    }
-  })
+  @Column('json')
   affectedArea: {
     type: string;
     coordinates: number[][][];
   };
 
-  @Prop({ required: true })
+  @Column('decimal', { precision: 10, scale: 8 })
   centerLatitude: number;
 
-  @Prop({ required: true })
+  @Column('decimal', { precision: 11, scale: 8 })
   centerLongitude: number;
 
-  @Prop({ required: true })
+  @Column()
   radius: number; // Radius in kilometers
 
-  @Prop({ required: true })
+  @Column()
   confidence: number; // AI confidence score (0-100)
 
-  @Prop({ required: true })
+  @Column()
   severity: number; // Predicted severity (0-100)
 
-  @Prop({ 
-    type: String, 
-    enum: PredictionStatus, 
-    default: PredictionStatus.ACTIVE 
+  @Column({
+    type: 'enum',
+    enum: PredictionStatus,
+    default: PredictionStatus.ACTIVE
   })
   status: PredictionStatus;
 
-  @Prop({ required: true })
+  @Column()
   predictedAt: Date; // When the event is predicted to occur
 
-  @Prop()
+  @Column({ nullable: true })
   expiresAt: Date;
 
-  @Prop({ type: Object, default: {} })
+  @Column('json', { default: {} })
   modelData: Record<string, any>; // ML model inputs and outputs
 
-  @Prop({ type: Object, default: {} })
+  @Column('json', { default: {} })
   metadata: Record<string, any>;
 
-  @Prop({ default: false })
+  @Column({ default: false })
   isVerified: boolean;
 
-  @Prop()
+  @Column({ nullable: true })
   verificationNotes: string;
 
-  @Prop({ default: 0 })
+  @Column({ default: 0 })
   accuracy: number; // Actual accuracy after verification (0-100)
 
+  @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
   updatedAt: Date;
 
   get centerLocation(): [number, number] {
     return [this.centerLongitude, this.centerLatitude];
   }
 }
-
-export const PredictionSchema = SchemaFactory.createForClass(Prediction);

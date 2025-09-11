@@ -1,25 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { Alert, AlertStatus } from '../../database/entities/alert.entity';
 
 @Injectable()
 export class AlertsService {
   constructor(
-    @InjectModel(Alert.name)
-    private readonly alertModel: Model<Alert>,
+    @InjectRepository(Alert)
+    private readonly alertRepository: Repository<Alert>,
   ) {}
 
   async findAll() {
-    return this.alertModel.find({ status: AlertStatus.ACTIVE }).sort({ createdAt: -1 });
+    return this.alertRepository.find({ 
+      where: { status: AlertStatus.ACTIVE },
+      order: { createdAt: 'DESC' }
+    });
   }
 
   async findOne(id: string) {
-    return this.alertModel.findById(id);
+    return this.alertRepository.findOne({ where: { id } });
   }
 
   async create(createAlertDto: any) {
-    const alert = new this.alertModel(createAlertDto);
-    return alert.save();
+    const alert = this.alertRepository.create(createAlertDto);
+    return this.alertRepository.save(alert);
   }
 }

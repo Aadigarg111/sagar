@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { User, UserRole } from '../../database/entities/user.entity';
 import { LoginDto, RegisterDto } from './dto';
 import * as bcrypt from 'bcryptjs';
@@ -9,8 +9,8 @@ import * as bcrypt from 'bcryptjs';
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectModel(User.name)
-    private readonly userModel: Model<User>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -18,7 +18,7 @@ export class AuthService {
     const { email, password, firstName, lastName, phone, role } = registerDto;
 
     // Check if user already exists
-    const existingUser = await this.userModel.findOne({ email });
+    const existingUser = await this.userRepository.findOne({ where: { email } });
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
@@ -27,7 +27,7 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
-    const user = new this.userModel({
+    const user = this.userRepository.create({
       email,
       password: hashedPassword,
       firstName,
@@ -36,7 +36,7 @@ export class AuthService {
       role: role || UserRole.CITIZEN,
     });
 
-    const savedUser = await user.save();
+    const savedUser = await this.userRepository.save(user);
 
     // Generate tokens
     const tokens = await this.generateTokens(savedUser);
@@ -51,7 +51,7 @@ export class AuthService {
     const { email, password } = loginDto;
 
     // Find user
-    const user = await this.userModel.findOne({ email });
+    const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -64,7 +64,7 @@ export class AuthService {
 
     // Update last login
     user.lastLoginAt = new Date();
-    await user.save();
+    await this.userRepository.save(user);
 
     // Generate tokens
     const tokens = await this.generateTokens(user);
@@ -78,7 +78,7 @@ export class AuthService {
   async refreshToken(refreshToken: string) {
     try {
       const payload = this.jwtService.verify(refreshToken);
-      const user = await this.userModel.findById(payload.sub);
+      const user = await this.userRepository.findOne({ where: { id: payload.sub } });
       
       if (!user) {
         throw new UnauthorizedException('Invalid refresh token');

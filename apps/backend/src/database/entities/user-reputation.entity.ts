@@ -1,5 +1,5 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { User } from './user.entity';
 
 export enum ReputationAction {
   REPORT_VERIFIED = 'report_verified',
@@ -14,32 +14,39 @@ export enum ReputationAction {
   MISINFORMATION = 'misinformation',
 }
 
-@Schema({ timestamps: true })
-export class UserReputation extends Document {
-  @Prop({ 
-    type: String, 
-    enum: ReputationAction, 
-    required: true 
+@Entity('user_reputations')
+export class UserReputation {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({
+    type: 'enum',
+    enum: ReputationAction
   })
   action: ReputationAction;
 
-  @Prop({ required: true })
+  @Column()
   points: number; // Can be positive or negative
 
-  @Prop()
+  @Column({ nullable: true })
   description: string;
 
-  @Prop()
+  @Column({ nullable: true })
   referenceId: string; // ID of the related report, alert, etc.
 
-  @Prop({ type: Object })
+  @Column('json', { nullable: true })
   metadata: Record<string, any>;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  userId: Types.ObjectId;
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'userId' })
+  user: User;
 
+  @Column()
+  userId: string;
+
+  @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
   updatedAt: Date;
 }
-
-export const UserReputationSchema = SchemaFactory.createForClass(UserReputation);

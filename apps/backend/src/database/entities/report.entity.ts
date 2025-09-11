@@ -1,5 +1,5 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { User } from './user.entity';
 
 export enum HazardType {
   TSUNAMI_WARNING = 'tsunami_warning',
@@ -26,90 +26,86 @@ export enum ReportStatus {
   INVESTIGATING = 'investigating',
 }
 
-@Schema({ timestamps: true })
-export class Report extends Document {
-  @Prop({ 
-    type: String, 
-    enum: HazardType, 
-    required: true 
+@Entity('reports')
+export class Report {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({
+    type: 'enum',
+    enum: HazardType
   })
   type: HazardType;
 
-  @Prop({ 
-    type: String, 
-    enum: SeverityLevel, 
-    required: true 
+  @Column({
+    type: 'enum',
+    enum: SeverityLevel
   })
   severity: SeverityLevel;
 
-  @Prop({ required: true })
+  @Column()
   description: string;
 
-  @Prop({ 
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number],
-      required: true
-    }
-  })
+  @Column('json')
   location: {
     type: string;
     coordinates: [number, number];
   };
 
-  @Prop({ required: true })
+  @Column('decimal', { precision: 10, scale: 8 })
   latitude: number;
 
-  @Prop({ required: true })
+  @Column('decimal', { precision: 11, scale: 8 })
   longitude: number;
 
-  @Prop({ 
-    type: String, 
-    enum: ReportStatus, 
-    default: ReportStatus.PENDING 
+  @Column({
+    type: 'enum',
+    enum: ReportStatus,
+    default: ReportStatus.PENDING
   })
   status: ReportStatus;
 
-  @Prop({ default: false })
+  @Column({ default: false })
   isVerified: boolean;
 
-  @Prop()
+  @Column({ nullable: true })
   verifiedBy: string;
 
-  @Prop()
+  @Column({ nullable: true })
   verifiedAt: Date;
 
-  @Prop()
+  @Column({ nullable: true })
   verificationNotes: string;
 
-  @Prop({ default: 0 })
+  @Column({ default: 0 })
   upvotes: number;
 
-  @Prop({ default: 0 })
+  @Column({ default: 0 })
   downvotes: number;
 
-  @Prop({ type: Object, default: {} })
+  @Column('json', { default: {} })
   metadata: Record<string, any>;
 
-  @Prop()
+  @Column({ nullable: true })
   nlpAnalysis: string; // JSON string of NLP analysis results
 
-  @Prop({ default: 0 })
+  @Column({ default: 0 })
   aiConfidence: number; // AI confidence score (0-100)
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  reporterId: Types.ObjectId;
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'reporterId' })
+  reporter: User;
 
+  @Column()
+  reporterId: string;
+
+  @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
   updatedAt: Date;
 
   get locationArray(): [number, number] {
     return [this.longitude, this.latitude];
   }
 }
-
-export const ReportSchema = SchemaFactory.createForClass(Report);

@@ -1,18 +1,18 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
-import { Report, ReportSchema } from '../../database/entities/report.entity';
-import { Alert, AlertSchema } from '../../database/entities/alert.entity';
-import { User, UserSchema } from '../../database/entities/user.entity';
-import { Prediction, PredictionSchema } from '../../database/entities/prediction.entity';
+import { Report } from '../../database/entities/report.entity';
+import { Alert } from '../../database/entities/alert.entity';
+import { User } from '../../database/entities/user.entity';
+import { Prediction } from '../../database/entities/prediction.entity';
 
 @Module({
-  imports: [MongooseModule.forFeature([
-    { name: Report.name, schema: ReportSchema },
-    { name: Alert.name, schema: AlertSchema },
-    { name: User.name, schema: UserSchema },
-    { name: Prediction.name, schema: PredictionSchema },
+  imports: [TypeOrmModule.forFeature([
+    Report,
+    Alert,
+    User,
+    Prediction,
   ])],
   controllers: [AnalyticsController],
   providers: [AnalyticsService],
