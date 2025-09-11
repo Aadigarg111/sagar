@@ -3,9 +3,5 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "installCommand": "npm install",
-  "framework": "nextjs",
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@sagar_api_url",
-    "NEXT_PUBLIC_MAPBOX_TOKEN": "@sagar_mapbox_token"
-  }
+  "framework": "nextjs"
 }
